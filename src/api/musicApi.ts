@@ -8,11 +8,14 @@ export interface Song {
   url: string;
   duration: number;
 }
-export const searchSongs = async (query: string): Promise<Song[]> => {
+
+// FIX: Added `page` parameter defaulting to 1
+export const searchSongs = async (query: string, page: number = 1): Promise<Song[]> => {
   if (!query) return [];
   
   try {
-    const response = await fetch(`${BASE_URL}/search/songs?query=${encodeURIComponent(query)}`);
+    // FIX: Appended &page=${page} to the API URL. (Added limit=20 to ensure consistent batch sizes)
+    const response = await fetch(`${BASE_URL}/search/songs?query=${encodeURIComponent(query)}&page=${page}&limit=20`);
     const json = await response.json();
 
     if (json.success && json.data && json.data.results) {
@@ -32,6 +35,9 @@ export const searchSongs = async (query: string): Promise<Song[]> => {
         let artistName = 'Unknown Artist';
         if (song.artists && song.artists.primary && song.artists.primary.length > 0) {
           artistName = song.artists.primary.map((a: any) => a.name).join(', ');
+        } else if (song.primaryArtists) {
+          // Fallback just in case the API returns the flat string version
+          artistName = song.primaryArtists;
         }
 
         return {

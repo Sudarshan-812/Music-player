@@ -1,35 +1,31 @@
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Image, 
-  TouchableOpacity, 
-  Dimensions 
-} from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Slider from '@react-native-community/slider';
 import TrackPlayer, { useProgress, usePlaybackState, State } from 'react-native-track-player';
-import { Play, Pause, SkipBack, SkipForward, ChevronDown, Shuffle, Repeat } from 'lucide-react-native';
+import { 
+  Play, Pause, SkipBack, SkipForward, ArrowLeft, 
+  MoreVertical, RotateCcw, RotateCw, ChevronUp, ListMusic, Shuffle
+} from 'lucide-react-native';
 import { usePlayerStore } from '../store/usePlayerStore';
 
 const { width } = Dimensions.get('window');
 
 const formatTime = (seconds: number) => {
-  if (!seconds || isNaN(seconds)) return "0:00";
+  if (!seconds || isNaN(seconds)) return "00:00";
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
 export default function PlayerScreen() {
   const navigation = useNavigation();
-  const { currentTrack } = usePlayerStore();
+  
+  const { currentTrack, isShuffle, toggleShuffle, playNext, playPrevious } = usePlayerStore();
   
   const progress = useProgress();
   const playbackState = usePlaybackState();
-  
   const isPlaying = playbackState.state === State.Playing;
 
   const togglePlayback = async () => {
@@ -44,133 +40,141 @@ export default function PlayerScreen() {
     await TrackPlayer.seekTo(value);
   };
 
-  const handleNext = async () => {
-    await TrackPlayer.skipToNext();
+  const jumpForward = async () => {
+    const pos = await TrackPlayer.getProgress().then(p => p.position);
+    await TrackPlayer.seekTo(pos + 10);
+  };
+  
+  const jumpBackward = async () => {
+    const pos = await TrackPlayer.getProgress().then(p => p.position);
+    await TrackPlayer.seekTo(Math.max(0, pos - 10));
   };
 
-  const handlePrevious = async () => {
-    await TrackPlayer.skipToPrevious();
-  };
-
-  if (!currentTrack) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.text}>No track selected</Text>
-      </View>
-    );
-  }
+  if (!currentTrack) return null;
 
   return (
     <SafeAreaView style={styles.container}>
-      
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ChevronDown color="white" size={32} />
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}>
+          <ArrowLeft color="white" size={28} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Now Playing</Text>
-        <View style={{ width: 32 }} />
+        
+        {/* Right side now ONLY has the options menu */}
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}>
+            <MoreVertical color="white" size={28} />
+          </TouchableOpacity>
+        </View>
       </View>
 
+      {/* Album Art */}
       <View style={styles.artworkContainer}>
         <Image source={{ uri: currentTrack.artwork }} style={styles.artwork} />
       </View>
 
-      <View style={styles.infoContainer}>
-        <Text style={styles.title} numberOfLines={1}>{currentTrack.title}</Text>
-        <Text style={styles.artist} numberOfLines={1}>{currentTrack.artist}</Text>
+      {/* Info Row (Shuffle - Title/Artist - Queue) */}
+      <View style={styles.infoRowContainer}>
+        {/* Left: Shuffle */}
+        <TouchableOpacity onPress={toggleShuffle} hitSlop={{top: 15, bottom: 15, left: 15, right: 15}}>
+          <Shuffle color={isShuffle ? "#FF8216" : "#A0A0A0"} size={24} />
+        </TouchableOpacity>
+
+        {/* Center: Info */}
+        <View style={styles.infoTextContainer}>
+          <Text style={styles.title} numberOfLines={1}>{currentTrack.title}</Text>
+          <Text style={styles.artist} numberOfLines={1}>{currentTrack.artist}</Text>
+        </View>
+
+        {/* Right: Queue */}
+        <TouchableOpacity onPress={() => navigation.navigate('Queue' as never)} hitSlop={{top: 15, bottom: 15, left: 15, right: 15}}>
+          <ListMusic color="white" size={24} />
+        </TouchableOpacity>
       </View>
 
+      {/* Progress */}
       <View style={styles.progressContainer}>
         <Slider
           style={styles.slider}
           minimumValue={0}
           maximumValue={progress.duration || currentTrack.duration || 100}
           value={progress.position || 0}
-          minimumTrackTintColor="#1DB954"
+          minimumTrackTintColor="#FF8216"
           maximumTrackTintColor="#404040"
-          thumbTintColor="#1DB954"
+          thumbTintColor="#FF8216"
           onSlidingComplete={handleSeek}
         />
         <View style={styles.timeContainer}>
           <Text style={styles.timeText}>{formatTime(progress.position)}</Text>
-          <Text style={styles.timeText}>
-            {formatTime((progress.duration || currentTrack.duration) - progress.position)}
-          </Text>
+          <Text style={styles.timeText}>{formatTime(progress.duration || currentTrack.duration)}</Text>
         </View>
       </View>
 
+      {/* Main Playback Controls (Restored to 5 symmetrical buttons) */}
       <View style={styles.controlsContainer}>
-        <TouchableOpacity>
-          <Shuffle color="#B3B3B3" size={24} />
+        <TouchableOpacity onPress={playPrevious}>
+          <SkipBack color="white" size={32} fill="white" />
         </TouchableOpacity>
         
-        <TouchableOpacity onPress={handlePrevious}>
-          <SkipBack color="white" size={36} fill="white" />
+        <TouchableOpacity onPress={jumpBackward}>
+          <RotateCcw color="white" size={28} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={togglePlayback} style={styles.playButton}>
           {isPlaying ? (
-            <Pause color="black" size={32} fill="black" />
+            <Pause color="white" size={32} fill="white" />
           ) : (
-            <Play color="black" size={32} fill="black" style={{ marginLeft: 4 }} />
+            <Play color="white" size={32} fill="white" style={{ marginLeft: 4 }} />
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={handleNext}>
-          <SkipForward color="white" size={36} fill="white" />
+        <TouchableOpacity onPress={jumpForward}>
+          <RotateCw color="white" size={28} />
         </TouchableOpacity>
 
-        <TouchableOpacity>
-          <Repeat color="#B3B3B3" size={24} />
+        <TouchableOpacity onPress={playNext}>
+          <SkipForward color="white" size={32} fill="white" />
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.lyricsContainer}>
+        <ChevronUp color="#A0A0A0" size={20} />
+        <Text style={styles.lyricsText}>Lyrics</Text>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#121212' },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    marginTop: 10,
+  container: { flex: 1, backgroundColor: '#181A20' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, marginTop: 10 },
+  artworkContainer: { alignItems: 'center', marginTop: 30, marginBottom: 30 },
+  artwork: { width: width - 48, height: width - 48, borderRadius: 24 },
+  
+  // NEW INFO ROW STYLES
+  infoRowContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingHorizontal: 32, 
+    marginBottom: 30 
   },
-  backButton: { padding: 4 },
-  headerTitle: { color: 'white', fontSize: 14, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 },
-  artworkContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 40,
-    marginBottom: 40,
+  infoTextContainer: { 
+    flex: 1, // Takes up available middle space, pushing buttons to edges
+    alignItems: 'center', 
+    paddingHorizontal: 16 
   },
-  artwork: {
-    width: width - 64,
-    height: width - 64,
-    borderRadius: 12,
-  },
-  infoContainer: { paddingHorizontal: 32, marginBottom: 30 },
-  title: { color: 'white', fontSize: 24, fontWeight: 'bold', marginBottom: 6 },
-  artist: { color: '#B3B3B3', fontSize: 18 },
+  title: { color: 'white', fontSize: 26, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' },
+  artist: { color: '#A0A0A0', fontSize: 16, textAlign: 'center' },
+  
   progressContainer: { paddingHorizontal: 24, marginBottom: 20 },
   slider: { width: '100%', height: 40 },
-  timeContainer: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 8, marginTop: -10 },
-  timeText: { color: '#B3B3B3', fontSize: 12 },
-  controlsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    marginTop: 10,
-  },
-  playButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#1DB954',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  text: { color: 'white' }
+  timeContainer: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginTop: -10 },
+  timeText: { color: '#A0A0A0', fontSize: 12 },
+  
+  // Restored symmetrical padding
+  controlsContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 32, marginTop: 10 },
+  playButton: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#FF8216', justifyContent: 'center', alignItems: 'center', shadowColor: '#FF8216', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 8 },
+  lyricsContainer: { alignItems: 'center', position: 'absolute', bottom: 20, width: '100%' },
+  lyricsText: { color: 'white', fontSize: 14, fontWeight: '600', marginTop: 4 }
 });

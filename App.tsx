@@ -1,20 +1,34 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import TrackPlayer, { Capability } from 'react-native-track-player';
+import AppNavigator from './src/navigation/AppNavigator';
+import 'react-native-gesture-handler';
 
 export default function App() {
+  useEffect(() => {
+    const setupPlayer = async () => {
+      try {
+        await TrackPlayer.setupPlayer();
+        await TrackPlayer.updateOptions({
+          capabilities: [
+            Capability.Play,
+            Capability.Pause,
+            Capability.SkipToNext,
+            Capability.SkipToPrevious,
+            Capability.Stop,
+          ],
+          compactCapabilities: [Capability.Play, Capability.Pause],
+        });
+      } catch (e) {
+        console.log('Player already initialized or error:', e);
+      }
+    };
+    setupPlayer();
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <AppNavigator />
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

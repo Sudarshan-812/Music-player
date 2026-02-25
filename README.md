@@ -1,4 +1,4 @@
-# 🎵 Mume - Music Player
+# 🎵  Music Player
 
 A high-performance music player application built with React Native and Expo. Developed as part of the technical assignment for the Lokal team.
 
@@ -22,3 +22,4 @@ This application delivers a seamless audio experience with robust background pla
 * **Audio Engine:** React Native Track Player
 * **Build System:** Expo Application Services (EAS) Cloud Build
 * **Target Platform:** Android
+

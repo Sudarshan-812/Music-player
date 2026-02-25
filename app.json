@@ -6,9 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "plugins": [
-      "react-native-track-player" 
-    ],
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",

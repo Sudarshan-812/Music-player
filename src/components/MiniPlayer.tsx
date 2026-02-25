@@ -1,47 +1,91 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  GestureResponderEvent,
+} from 'react-native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Play, Pause, SkipForward } from 'lucide-react-native';
-import TrackPlayer, { usePlaybackState, State } from 'react-native-track-player';
+import TrackPlayer, {
+  usePlaybackState,
+  State,
+} from 'react-native-track-player';
 import { usePlayerStore } from '../store/usePlayerStore';
 
-export default function MiniPlayer() {
-  const navigation = useNavigation<any>();
+/**
+ * Define navigation routes used by this component.
+ * Extend this if you add more screens later.
+ */
+type RootStackParamList = {
+  Player: undefined;
+};
+
+export default function MiniPlayer(): JSX.Element | null {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const { currentTrack } = usePlayerStore();
   const playbackState = usePlaybackState();
-  
+
   const isPlaying = playbackState.state === State.Playing;
 
-  // If no song is loaded, don't show the Mini Player at all!
+  // Do not render if no track is loaded
   if (!currentTrack) return null;
 
-  const togglePlayback = async () => {
-    if (isPlaying) {
-      await TrackPlayer.pause();
-    } else {
-      await TrackPlayer.play();
-    }
-  };
+  /**
+   * Toggles playback between play and pause.
+   * Preserves existing playback behavior.
+   */
+  const togglePlayback = useCallback(
+    async (_event: GestureResponderEvent): Promise<void> => {
+      if (isPlaying) {
+        await TrackPlayer.pause();
+      } else {
+        await TrackPlayer.play();
+      }
+    },
+    [isPlaying]
+  );
 
-  const skipNext = async () => {
+  /**
+   * Skips to the next track in queue.
+   * Does not modify queue logic.
+   */
+  const skipNext = useCallback(async (): Promise<void> => {
     await TrackPlayer.skipToNext();
-  };
+  }, []);
+
+  const handleOpenPlayer = useCallback((): void => {
+    navigation.navigate('Player');
+  }, [navigation]);
 
   return (
-    <TouchableOpacity 
-      style={styles.container} 
+    <TouchableOpacity
+      style={styles.container}
       activeOpacity={0.95}
-      onPress={() => navigation.navigate('Player')} // Tap to open Full Player
+      onPress={handleOpenPlayer}
     >
       <View style={styles.innerContainer}>
-        <Image source={{ uri: currentTrack.artwork }} style={styles.artwork} />
-        
+        <Image
+          source={{ uri: currentTrack.artwork }}
+          style={styles.artwork}
+        />
+
         <View style={styles.infoContainer}>
-          <Text style={styles.title} numberOfLines={1}>{currentTrack.title}</Text>
-          <Text style={styles.artist} numberOfLines={1}>{currentTrack.artist}</Text>
+          <Text style={styles.title} numberOfLines={1}>
+            {currentTrack.title}
+          </Text>
+          <Text style={styles.artist} numberOfLines={1}>
+            {currentTrack.artist}
+          </Text>
         </View>
 
-        <TouchableOpacity onPress={togglePlayback} style={styles.controlButton} hitSlop={{top: 15, bottom: 15, left: 15, right: 15}}>
+        <TouchableOpacity
+          onPress={togglePlayback}
+          style={styles.controlButton}
+          hitSlop={hitSlop}
+        >
           {isPlaying ? (
             <Pause color="white" size={26} fill="white" />
           ) : (
@@ -49,7 +93,11 @@ export default function MiniPlayer() {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={skipNext} style={styles.controlButton} hitSlop={{top: 15, bottom: 15, left: 15, right: 15}}>
+        <TouchableOpacity
+          onPress={skipNext}
+          style={styles.controlButton}
+          hitSlop={hitSlop}
+        >
           <SkipForward color="white" size={26} fill="white" />
         </TouchableOpacity>
       </View>
@@ -57,13 +105,15 @@ export default function MiniPlayer() {
   );
 }
 
+const hitSlop = { top: 15, bottom: 15, left: 15, right: 15 };
+
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 16, // Floats slightly above the bottom of the screen
+    bottom: 16,
     left: 16,
     right: 16,
-    backgroundColor: '#282A30', // Matches the Figma Search Bar background
+    backgroundColor: '#282A30',
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -99,5 +149,5 @@ const styles = StyleSheet.create({
   controlButton: {
     padding: 8,
     marginLeft: 4,
-  }
+  },
 });

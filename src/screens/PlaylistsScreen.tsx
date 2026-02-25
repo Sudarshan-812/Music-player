@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function FavoritesScreen() { // Change this name for Playlists and Settings
+export default function FavoritesScreen() { 
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Playlists Coming Soon!</Text> 

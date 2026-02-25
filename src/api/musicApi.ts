@@ -1,5 +1,8 @@
-const BASE_URL = 'https://saavn.sumit.co/api';
+const baseUrl = 'https://saavn.sumit.co/api';
 
+/**
+ * Represents a normalized song object used inside the app.
+ */
 export interface Song {
   id: string;
   title: string;
@@ -9,50 +12,101 @@ export interface Song {
   duration: number;
 }
 
-// FIX: Added `page` parameter defaulting to 1
-export const searchSongs = async (query: string, page: number = 1): Promise<Song[]> => {
-  if (!query) return [];
-  
-  try {
-    // FIX: Appended &page=${page} to the API URL. (Added limit=20 to ensure consistent batch sizes)
-    const response = await fetch(`${BASE_URL}/search/songs?query=${encodeURIComponent(query)}&page=${page}&limit=20`);
-    const json = await response.json();
+/**
+ * Raw API response types (based on Saavn API structure)
+ */
+interface ApiImage {
+  url: string;
+}
 
-    if (json.success && json.data && json.data.results) {
-      return json.data.results.map((song: any) => {
-        
-        // FIX #1: Change .link to .url
-        const highResImage = song.image && song.image.length > 0 
-          ? song.image[song.image.length - 1].url 
+interface ApiDownloadUrl {
+  url: string;
+}
+
+interface ApiArtist {
+  name: string;
+}
+
+interface ApiSong {
+  id: string;
+  name?: string;
+  title?: string;
+  duration?: string;
+  image?: ApiImage[];
+  downloadUrl?: ApiDownloadUrl[];
+  primaryArtists?: string;
+  artists?: {
+    primary?: ApiArtist[];
+  };
+}
+
+interface SearchResponse {
+  success: boolean;
+  data?: {
+    results?: ApiSong[];
+  };
+}
+
+/**
+ * Fetches songs from the Saavn API based on a search query.
+ *
+ * - Supports pagination via `page`
+ * - Returns normalized Song[] used internally
+ * - Returns empty array on failure (no behavior change)
+ *
+ * @param query - Search query string
+ * @param page - Page number for pagination (default: 1)
+ */
+export const searchSongs = async (
+  query: string,
+  page: number = 1
+): Promise<Song[]> => {
+  if (!query.trim()) return [];
+
+  try {
+    const response = await fetch(
+      `${baseUrl}/search/songs?query=${encodeURIComponent(
+        query
+      )}&page=${page}&limit=20`
+    );
+
+    const json: SearchResponse = await response.json();
+
+    if (!json.success || !json.data?.results) {
+      return [];
+    }
+
+    return json.data.results.map((song): Song => {
+      const highResImage =
+        song.image && song.image.length > 0
+          ? song.image[song.image.length - 1].url
           : 'https://via.placeholder.com/150';
 
-        // FIX #2: Change .link to .url
-        const audioUrl = song.downloadUrl && song.downloadUrl.length > 0
+      const audioUrl =
+        song.downloadUrl && song.downloadUrl.length > 0
           ? song.downloadUrl[song.downloadUrl.length - 1].url
           : '';
 
-        // Safely extract primary artist names
-        let artistName = 'Unknown Artist';
-        if (song.artists && song.artists.primary && song.artists.primary.length > 0) {
-          artistName = song.artists.primary.map((a: any) => a.name).join(', ');
-        } else if (song.primaryArtists) {
-          // Fallback just in case the API returns the flat string version
-          artistName = song.primaryArtists;
-        }
+      let artistName = 'Unknown Artist';
 
-        return {
-          id: song.id,
-          title: song.name || song.title, // API sometimes uses 'name' instead of 'title'
-          artist: artistName,
-          artwork: highResImage,
-          url: audioUrl,
-          duration: parseInt(song.duration, 10) || 0,
-        };
-      });
-    }
-    return [];
-  } catch (error) {
-    console.error("Error fetching songs:", error);
+      if (song.artists?.primary && song.artists.primary.length > 0) {
+        artistName = song.artists.primary
+          .map((artist) => artist.name)
+          .join(', ');
+      } else if (song.primaryArtists) {
+        artistName = song.primaryArtists;
+      }
+
+      return {
+        id: song.id,
+        title: song.name ?? song.title ?? 'Unknown Title',
+        artist: artistName,
+        artwork: highResImage,
+        url: audioUrl,
+        duration: Number.parseInt(song.duration ?? '0', 10) || 0,
+      };
+    });
+  } catch {
     return [];
   }
 };

@@ -13,8 +13,8 @@ This application delivers a seamless audio experience with robust background pla
 
 ## 🚀 Live Demo & APK
 
-* **Download the Android APK:** [Insert link to your EAS APK download here]
-* **Video Demonstration:** [Insert link to your 1-2 minute demo video here]
+* **Download the Android APK:** https://drive.google.com/drive/folders/1yAuPOKKJWGOILcNY2NM7srBo_iDug99Z?usp=sharing
+* **Video Demonstration:** https://drive.google.com/drive/folders/1yAuPOKKJWGOILcNY2NM7srBo_iDug99Z?usp=sharing
 
 ## 🛠️ Tech Stack
 
@@ -22,4 +22,5 @@ This application delivers a seamless audio experience with robust background pla
 * **Audio Engine:** React Native Track Player
 * **Build System:** Expo Application Services (EAS) Cloud Build
 * **Target Platform:** Android
+
 

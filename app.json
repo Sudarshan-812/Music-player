@@ -1,28 +1,30 @@
 {
   "expo": {
-    "name": "LokalMusicPlayer",
-    "slug": "LokalMusicPlayer",
+    "name": "Mume",
+    "slug": "lokal-music-player",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": false, 
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "ios": {
-      "supportsTablet": true
-    },
+    "userInterfaceStyle": "dark",
+    "plugins": [
+      "react-native-track-player" 
+    ],
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FF8216"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.sudarshan812.lokalmusicplayer"
+      "package": "com.sudarshan.mume",
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.WAKE_LOCK"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8daa4875-ee72-48df-a29b-37a5c7849612"
+      }
     }
   }
 }

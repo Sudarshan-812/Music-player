@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('lockfileVersion:', d.get\\('lockfileVersion'\\)\\); print\\('node_modules count:', len\\(d.get\\('packages',{}\\)\\)\\)\")",
+      "Bash(npm install:*)",
+      "Bash(npx expo:*)",
+      "Bash(npm info:*)",
+      "Bash(node -e \"require\\('./node_modules/react-native-reanimated/plugin/index.js'\\); console.log\\('reanimated plugin chain: OK'\\);\")",
+      "Bash(npx tsc:*)",
+      "Bash(node -e \"const p = require\\('./node_modules/expo-dev-client/package.json'\\); console.log\\('expo-dev-client installed:', p.version\\)\")",
+      "Bash(node -e \"const fs = require\\('fs'\\); const p = require\\('./node_modules/react-native-track-player/package.json'\\); console.log\\('track-player version:', p.version\\); console.log\\('has expo plugin:', !!p['expo-module-config'] || fs.existsSync\\('./node_modules/react-native-track-player/app.plugin.js'\\) || fs.existsSync\\('./node_modules/react-native-track-player/plugin/index.js'\\)\\); console.log\\('expo module config:', JSON.stringify\\(p['expo-module-config'] || 'none'\\)\\)\")",
+      "Bash(ls C:/LokalMusicPlayer/node_modules/react-native-track-player/*.js)",
+      "Bash(ls C:/LokalMusicPlayer/node_modules/react-native-track-player/plugin*)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k,':',json.dumps\\(v\\)\\) for k,v in d.items\\(\\) if k in ['main','module','plugin','plugins','files','exports']]\")",
+      "Bash(python -c ':*)",
+      "Bash(rm:*)",
+      "Bash(python -c \"import json; d=json.load\\(open\\('C:/LokalMusicPlayer/package.json'\\)\\); print\\('postinstall:', d['scripts'].get\\('postinstall'\\)\\); print\\('patch-package devDep:', d['devDependencies'].get\\('patch-package'\\)\\)\")",
+      "Bash(npm uninstall:*)",
+      "Bash(./android/gradlew.bat --stop)",
+      "Bash(cmd /c \"rmdir /s /q node_modules\")",
+      "Bash(./android/gradlew.bat --status)",
+      "Bash(node:*)",
+      "Bash(echo \"exit code: $?\")",
+      "Bash(npm view:*)",
+      "Bash(curl -s \"https://saavn.sumit.co/api/search/songs?query=top+hits&page=1&limit=3\")",
+      "Bash(curl -s \"https://saavn.dev/api/search/songs?query=top+hits&page=1&limit=3\")",
+      "Bash(curl -s \"https://jiosaavn-api-privatecoder.vercel.app/search/songs?query=arijit+singh&limit=2\")",
+      "Bash(curl -s --max-time 10 \"https://saavn-api.vercel.app/search?query=arijit+singh\")",
+      "Bash(curl -s --max-time 10 \"https://jiosaavn.vercel.app/api/search/songs?query=arijit\")",
+      "Bash(curl -s --max-time 15 \"https://jiosaavn-api-orpin.vercel.app/search/songs?query=arijit+singh&limit=2\")",
+      "Bash(echo \"---status: $?\")"
+    ]
+  }
+}

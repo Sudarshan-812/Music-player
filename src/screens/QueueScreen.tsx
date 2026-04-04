@@ -15,15 +15,11 @@ import {
   useNavigation,
   NavigationProp,
 } from '@react-navigation/native';
-import { ArrowLeft, GripVertical, Trash2 } from 'lucide-react-native';
+import { ChevronDown, GripVertical, Trash2 } from 'lucide-react-native';
 
 import { usePlayerStore } from '../store/usePlayerStore';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 
-/**
- * Track type inferred from Zustand queue state.
- * Keeps it consistent with store structure.
- */
 type QueueTrack = ReturnType<
   typeof usePlayerStore.getState
 >['queue'][number];
@@ -31,17 +27,12 @@ type QueueTrack = ReturnType<
 const hitSlopLarge = { top: 20, bottom: 20, left: 20, right: 20 };
 const hitSlopMedium = { top: 15, bottom: 15, left: 15, right: 15 };
 
-export default function QueueScreen(): JSX.Element {
+export default function QueueScreen(): React.JSX.Element {
   const navigation =
     useNavigation<NavigationProp<RootStackParamList>>();
 
-  const { queue, reorderQueue, removeFromQueue } =
-    usePlayerStore();
+  const { queue, reorderQueue, removeFromQueue } = usePlayerStore();
 
-  /**
-   * Renders a draggable queue item.
-   * Drag behavior and removal logic remain unchanged.
-   */
   const renderItem = useCallback(
     ({
       item,
@@ -55,11 +46,7 @@ export default function QueueScreen(): JSX.Element {
           disabled={isActive}
           style={[
             styles.rowItem,
-            {
-              backgroundColor: isActive
-                ? '#282A30'
-                : 'transparent',
-            },
+            isActive && styles.rowItemActive,
           ]}
         >
           <TouchableOpacity
@@ -67,7 +54,7 @@ export default function QueueScreen(): JSX.Element {
             delayLongPress={100}
             style={styles.dragHandle}
           >
-            <GripVertical color="#A0A0A0" size={24} />
+            <GripVertical color="#3F3F46" size={22} />
           </TouchableOpacity>
 
           <Image
@@ -89,7 +76,7 @@ export default function QueueScreen(): JSX.Element {
             style={styles.deleteButton}
             hitSlop={hitSlopMedium}
           >
-            <Trash2 color="#FF4444" size={20} />
+            <Trash2 color="#FF453A" size={18} />
           </TouchableOpacity>
         </TouchableOpacity>
       </ScaleDecorator>
@@ -110,28 +97,34 @@ export default function QueueScreen(): JSX.Element {
         <TouchableOpacity
           onPress={navigation.goBack}
           hitSlop={hitSlopLarge}
+          style={styles.headerBackBtn}
         >
-          <ArrowLeft color="white" size={28} />
+          <ChevronDown color="#FFFFFF" size={28} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Queue</Text>
+        <Text style={styles.headerTitle}>Up Next</Text>
 
         <View style={styles.headerSpacer} />
       </View>
 
+      <View style={styles.trackCount}>
+        <Text style={styles.trackCountText}>
+          {queue.length} {queue.length === 1 ? 'track' : 'tracks'}
+        </Text>
+      </View>
+
       {queue.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
-            Your queue is empty.
+          <Text style={styles.emptyTitle}>Queue is empty</Text>
+          <Text style={styles.emptySubtitle}>
+            Add songs to start building your queue
           </Text>
         </View>
       ) : (
         <DraggableFlatList
           data={queue}
           onDragEnd={handleDragEnd}
-          keyExtractor={(item, index) =>
-            `${item.id}-${index}`
-          }
+          keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={renderItem}
           contentContainerStyle={styles.listContainer}
         />
@@ -141,76 +134,123 @@ export default function QueueScreen(): JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#181A20' },
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#282A30',
+    borderBottomColor: '#27272A',
+  },
+
+  headerBackBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   headerTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
 
-  headerSpacer: { width: 28 },
+  headerSpacer: {
+    width: 40,
+  },
+
+  trackCount: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+
+  trackCountText: {
+    color: '#52525B',
+    fontSize: 13,
+    fontWeight: '500',
+  },
 
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 40,
   },
 
-  emptyText: {
-    color: '#A0A0A0',
-    fontSize: 16,
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
   },
 
-  listContainer: { paddingBottom: 40 },
+  emptySubtitle: {
+    color: '#52525B',
+    fontSize: 14,
+    fontWeight: '400',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
+  listContainer: {
+    paddingBottom: 48,
+  },
 
   rowItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#282A30',
+    borderBottomColor: '#27272A',
+  },
+
+  rowItemActive: {
+    backgroundColor: '#1C1C1E',
   },
 
   dragHandle: {
-    paddingRight: 12,
+    paddingRight: 14,
     justifyContent: 'center',
   },
 
   artwork: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    width: 52,
+    height: 52,
+    borderRadius: 10,
   },
 
   songInfo: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 14,
     justifyContent: 'center',
   },
 
   title: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
     marginBottom: 4,
   },
 
   artist: {
-    color: '#A0A0A0',
-    fontSize: 14,
+    color: '#A1A1AA',
+    fontSize: 13,
+    fontWeight: '400',
   },
 
-  deleteButton: { padding: 8 },
+  deleteButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

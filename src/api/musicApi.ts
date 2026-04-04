@@ -1,8 +1,5 @@
-const baseUrl = 'https://saavn.sumit.co/api';
+const baseUrl = 'https://jiosaavn-api5.vercel.app/api';
 
-/**
- * Represents a normalized song object used inside the app.
- */
 export interface Song {
   id: string;
   title: string;
@@ -12,9 +9,6 @@ export interface Song {
   duration: number;
 }
 
-/**
- * Raw API response types (based on Saavn API structure)
- */
 interface ApiImage {
   url: string;
 }
@@ -47,16 +41,6 @@ interface SearchResponse {
   };
 }
 
-/**
- * Fetches songs from the Saavn API based on a search query.
- *
- * - Supports pagination via `page`
- * - Returns normalized Song[] used internally
- * - Returns empty array on failure (no behavior change)
- *
- * @param query - Search query string
- * @param page - Page number for pagination (default: 1)
- */
 export const searchSongs = async (
   query: string,
   page: number = 1
@@ -65,9 +49,7 @@ export const searchSongs = async (
 
   try {
     const response = await fetch(
-      `${baseUrl}/search/songs?query=${encodeURIComponent(
-        query
-      )}&page=${page}&limit=20`
+      `${baseUrl}/search/songs?query=${encodeURIComponent(query)}&page=${page}&limit=20`
     );
 
     const json: SearchResponse = await response.json();

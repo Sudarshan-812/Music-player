@@ -1,9 +1,54 @@
-import TrackPlayer, { Event } from 'react-native-track-player';
+import TrackPlayer, { Event, State } from 'react-native-track-player';
+import { usePlayerStore } from '../store/usePlayerStore';
+import { searchSongs } from '../api/musicApi';
 
-export const PlaybackService = async function() {
-    TrackPlayer.addEventListener(Event.RemotePlay, () => TrackPlayer.play());
-    TrackPlayer.addEventListener(Event.RemotePause, () => TrackPlayer.pause());
-    TrackPlayer.addEventListener(Event.RemoteNext, () => TrackPlayer.skipToNext());
-    TrackPlayer.addEventListener(Event.RemotePrevious, () => TrackPlayer.skipToPrevious());
-    TrackPlayer.addEventListener(Event.RemoteStop, () => TrackPlayer.reset());
+const AUTO_PLAY_QUERIES = [
+  'top hits bollywood',
+  'trending english songs',
+  'best hindi 2024',
+  'popular pop music',
+  'chill lofi beats',
+  'latest kannada hits',
+];
+
+export const PlaybackService = async function () {
+  TrackPlayer.addEventListener(Event.RemotePlay, () => TrackPlayer.play());
+  TrackPlayer.addEventListener(Event.RemotePause, () => TrackPlayer.pause());
+  TrackPlayer.addEventListener(Event.RemoteStop, () => TrackPlayer.reset());
+
+  TrackPlayer.addEventListener(Event.RemoteNext, () => {
+    usePlayerStore.getState().playNext();
+  });
+
+  TrackPlayer.addEventListener(Event.RemotePrevious, () => {
+    usePlayerStore.getState().playPrevious();
+  });
+
+  // Auto-play: when the queue runs out, fetch more songs automatically
+  TrackPlayer.addEventListener(Event.PlaybackQueueEnded, async () => {
+    try {
+      const query = AUTO_PLAY_QUERIES[Math.floor(Math.random() * AUTO_PLAY_QUERIES.length)];
+      const songs = await searchSongs(query, 1);
+      const newTracks = songs.slice(0, 5).map((s) => ({
+        id: s.id,
+        url: s.url,
+        title: s.title,
+        artist: s.artist,
+        artwork: s.artwork,
+      }));
+
+      if (newTracks.length > 0) {
+        await usePlayerStore.getState().appendToQueue(newTracks);
+        await TrackPlayer.play();
+      }
+    } catch {
+      // silently fail — don't crash the service
+    }
+  });
+
+  // Apply volume normalization whenever a new track becomes active
+  TrackPlayer.addEventListener(Event.PlaybackActiveTrackChanged, async () => {
+    const { normalizeVolume } = usePlayerStore.getState();
+    await TrackPlayer.setVolume(normalizeVolume ? 0.8 : 1.0);
+  });
 };

@@ -4,150 +4,220 @@ import {
   Text,
   StyleSheet,
   Image,
+  Pressable,
   TouchableOpacity,
-  GestureResponderEvent,
+  Platform,
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Play, Pause, SkipForward } from 'lucide-react-native';
 import TrackPlayer, {
   usePlaybackState,
   State,
+  useProgress,
 } from 'react-native-track-player';
 import { usePlayerStore } from '../store/usePlayerStore';
 
-/**
- * Define navigation routes used by this component.
- * Extend this if you add more screens later.
- */
 type RootStackParamList = {
   Player: undefined;
 };
 
-export default function MiniPlayer(): JSX.Element | null {
+// Slightly larger hitSlop for better mobile accessibility
+const hitSlop = { top: 16, bottom: 16, left: 16, right: 16 };
+
+export default function MiniPlayer(): React.JSX.Element | null {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const { currentTrack } = usePlayerStore();
+  const { currentTrack, playNext } = usePlayerStore();
   const playbackState = usePlaybackState();
-
+  const { position, duration } = useProgress();
+  
   const isPlaying = playbackState.state === State.Playing;
+  
+  // Calculate progress percentage for the dynamic bar
+  const progressPercent = duration > 0 ? (position / duration) * 100 : 0;
 
-  // Do not render if no track is loaded
-  if (!currentTrack) return null;
-
-  /**
-   * Toggles playback between play and pause.
-   * Preserves existing playback behavior.
-   */
-  const togglePlayback = useCallback(
-    async (_event: GestureResponderEvent): Promise<void> => {
-      if (isPlaying) {
-        await TrackPlayer.pause();
-      } else {
-        await TrackPlayer.play();
-      }
-    },
-    [isPlaying]
-  );
-
-  /**
-   * Skips to the next track in queue.
-   * Does not modify queue logic.
-   */
-  const skipNext = useCallback(async (): Promise<void> => {
-    await TrackPlayer.skipToNext();
-  }, []);
+  const togglePlayback = useCallback(async (): Promise<void> => {
+    if (isPlaying) {
+      await TrackPlayer.pause();
+    } else {
+      await TrackPlayer.play();
+    }
+  }, [isPlaying]);
 
   const handleOpenPlayer = useCallback((): void => {
     navigation.navigate('Player');
   }, [navigation]);
 
+  if (!currentTrack) return null;
+
   return (
-    <TouchableOpacity
-      style={styles.container}
-      activeOpacity={0.95}
+    <Pressable
+      style={({ pressed }) => [
+        styles.outerShadowContainer,
+        pressed && styles.containerPressed
+      ]}
       onPress={handleOpenPlayer}
     >
-      <View style={styles.innerContainer}>
+      <View style={styles.contentWrapper}>
+        {/* --- DYNAMIC AMBIENT BACKGROUND --- */}
         <Image
           source={{ uri: currentTrack.artwork }}
-          style={styles.artwork}
+          style={StyleSheet.absoluteFillObject}
+          blurRadius={40} // Slightly tighter blur for a smaller component
         />
+        <View style={styles.darkOverlay} />
+        {/* ---------------------------------- */}
 
-        <View style={styles.infoContainer}>
-          <Text style={styles.title} numberOfLines={1}>
-            {currentTrack.title}
-          </Text>
-          <Text style={styles.artist} numberOfLines={1}>
-            {currentTrack.artist}
-          </Text>
+        <View style={styles.innerContainer}>
+          <View style={styles.artworkContainer}>
+            <Image
+              source={{ uri: currentTrack.artwork }}
+              style={styles.artwork}
+            />
+          </View>
+
+          <View style={styles.infoContainer}>
+            <Text style={styles.title} numberOfLines={1}>
+              {currentTrack.title}
+            </Text>
+            <Text style={styles.artist} numberOfLines={1}>
+              {currentTrack.artist}
+            </Text>
+          </View>
+
+          <View style={styles.controlsContainer}>
+            <TouchableOpacity
+              onPress={togglePlayback}
+              style={styles.controlBtn}
+              hitSlop={hitSlop}
+              activeOpacity={0.7}
+            >
+              {isPlaying ? (
+                <Pause color="#FFFFFF" size={22} fill="#FFFFFF" />
+              ) : (
+                <Play color="#FFFFFF" size={22} fill="#FFFFFF" style={styles.playIconOffset} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={playNext}
+              style={styles.controlBtn}
+              hitSlop={hitSlop}
+              activeOpacity={0.7}
+            >
+              <SkipForward color="#FFFFFF" size={24} fill="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <TouchableOpacity
-          onPress={togglePlayback}
-          style={styles.controlButton}
-          hitSlop={hitSlop}
-        >
-          {isPlaying ? (
-            <Pause color="white" size={26} fill="white" />
-          ) : (
-            <Play color="white" size={26} fill="white" />
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={skipNext}
-          style={styles.controlButton}
-          hitSlop={hitSlop}
-        >
-          <SkipForward color="white" size={26} fill="white" />
-        </TouchableOpacity>
+        {/* Updated Progress Bar to match the new white/ambient theme */}
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressBar, { width: `${progressPercent}%` }]} />
+        </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
-const hitSlop = { top: 15, bottom: 15, left: 15, right: 15 };
+// Shared text shadow to keep text readable against ambient colors
+const textShadowStyle = {
+  textShadowColor: 'rgba(0, 0, 0, 0.5)',
+  textShadowOffset: { width: 0, height: 1 },
+  textShadowRadius: 4,
+};
 
 const styles = StyleSheet.create({
-  container: {
+  // Outer container handles the shadow exclusively
+  outerShadowContainer: {
     position: 'absolute',
     bottom: 16,
-    left: 16,
-    right: 16,
-    backgroundColor: '#282A30',
-    borderRadius: 12,
+    left: 12,
+    right: 12,
+    borderRadius: 16,
+    // Premium shadow setup
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 10,
+    shadowRadius: 12,
+    elevation: 12,
+    backgroundColor: '#121212', // Fallback behind the image
+  },
+  containerPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.97 }],
+  },
+  // Inner wrapper handles clipping the blurred image to the border radius
+  contentWrapper: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)', // Subtle glassmorphic border
+  },
+  darkOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)', // Darkens the blurred art just enough for text readability
   },
   innerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  artworkContainer: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
   },
   artwork: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 8,
+    backgroundColor: '#27272A',
   },
   infoContainer: {
     flex: 1,
-    marginLeft: 14,
+    marginLeft: 12,
     justifyContent: 'center',
   },
   title: {
-    color: 'white',
+    color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    marginBottom: 2,
+    ...textShadowStyle,
   },
   artist: {
-    color: '#A0A0A0',
+    color: '#FFFFFF',
+    opacity: 0.8,
     fontSize: 13,
-    marginTop: 2,
+    fontWeight: '500',
+    ...textShadowStyle,
   },
-  controlButton: {
-    padding: 8,
-    marginLeft: 4,
+  controlsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12, // Slightly more space between the bare icons
+    paddingRight: 4,
+  },
+  controlBtn: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // Removed solid background color!
+  },
+  playIconOffset: {
+    marginLeft: 3,
+  },
+  progressTrack: {
+    height: 2, 
+    backgroundColor: 'rgba(255, 255, 255, 0.2)', // Semi-transparent white
+    width: '100%',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#FFFFFF', // Solid white to pop against the ambient background
   },
 });

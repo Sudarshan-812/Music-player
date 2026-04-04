@@ -1,28 +1,48 @@
 {
   "expo": {
-    "name": "Lokal Music",
+    "name": "Dhvani",
     "slug": "musicplayer",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.jpg",
+    "icon": "./assets/icon1.jpg",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/icon.jpg",
+      "image": "./assets/icon1.jpg",
       "resizeMode": "contain",
-      "backgroundColor": "#121212"
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "bundleIdentifier": "com.sudarshan.mume",
+      "supportsTablet": false,
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "audio"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.jpg",
-        "backgroundColor": "#FF8216"
+        "foregroundImage": "./assets/icon1.jpg",
+        "backgroundColor": "#000000"
       },
       "package": "com.sudarshan.mume",
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "android.permission.WAKE_LOCK"
       ]
     },
+    "plugins": [
+      "expo-dev-client",
+      [
+        "expo-build-properties",
+        {
+          "android": { "newArchEnabled": false },
+          "ios": { "newArchEnabled": false }
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "6359557c-807a-4bf8-9551-0e16287fc967"

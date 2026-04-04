@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
   FlatList,
   Image,
   StyleSheet,
@@ -10,159 +9,126 @@ import {
   ActivityIndicator,
   ScrollView,
   ListRenderItem,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, PlusCircle } from 'lucide-react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import TrackPlayer from 'react-native-track-player';
+import { Bell, Settings } from 'lucide-react-native'; // Added header icons
 
 import { searchSongs, Song } from '../api/musicApi';
 import { usePlayerStore } from '../store/usePlayerStore';
 import MiniPlayer from '../components/MiniPlayer';
 import type { RootStackParamList } from '../navigation/AppNavigator';
 
-const defaultArtwork =
-  'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&q=80';
+const { width } = Dimensions.get('window');
+const defaultArtwork = 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&q=80';
 
-const hitSlop = { top: 15, bottom: 15, left: 15, right: 15 };
+// Helper for dynamic immersion
+const getGreeting = (): string => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+};
 
-export default function HomeScreen(): JSX.Element {
+export default function HomeScreen(): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
-  const [query, setQuery] = useState<string>('');
-
-  // Search State
-  const [searchResults, setSearchResults] = useState<Song[]>([]);
-  const [isSearching, setIsSearching] = useState<boolean>(false);
-  const [page, setPage] = useState<number>(1);
-  const [loadingMore, setLoadingMore] = useState<boolean>(false);
-
-  // Dashboard State
-  const [recommended, setRecommended] = useState<Song[]>([]);
-  const [recentlyPlayed, setRecentlyPlayed] = useState<Song[]>([]);
+  // Updated state for our "Smart" categories
+  const [quickPicks, setQuickPicks] = useState<Song[]>([]);
+  const [focusFlow, setFocusFlow] = useState<Song[]>([]);
+  const [localTrending, setLocalTrending] = useState<Song[]>([]);
   const [artists, setArtists] = useState<Song[]>([]);
   const [loadingHome, setLoadingHome] = useState<boolean>(true);
 
-  const { setCurrentTrack, setPlaying, addToQueue } = usePlayerStore();
+  const { setCurrentTrack, setPlaying, addToHistory } = usePlayerStore();
 
-  /**
-   * Boot-up dashboard fetch.
-   * Loads recommended, recent, and artist sections in parallel.
-   */
   useEffect(() => {
     const fetchHomeDashboard = async (): Promise<void> => {
       setLoadingHome(true);
-
       try {
-        const [recData, recentData, artistData] = await Promise.all([
-          searchSongs('top hits', 1),
-          searchSongs('latest trending', 1),
-          searchSongs('best of', 1),
+        // Fetching specific, context-aware "Smart" categories
+        const [quickData, focusData, localData] = await Promise.all([
+          searchSongs('bansuri flute instrumental relaxing', 1), // Calm vibes for Quick Picks
+          searchSongs('deep focus lofi coding', 1),            // Heavy focus / gaming
+          searchSongs('kannada chartbusters', 1),              // Localized trending
         ]);
 
+        // Extract unique artists safely
+        const combinedForArtists = [...quickData, ...focusData, ...localData];
         const uniqueArtists = Array.from(
-          new Set(artistData.map((a) => a.artist))
+          new Set(combinedForArtists.map((a) => a.artist))
         )
-          .map((name) => artistData.find((a) => a.artist === name))
+          .map((name) => combinedForArtists.find((a) => a.artist === name))
           .filter(Boolean) as Song[];
 
-        setRecommended(recData);
-        setRecentlyPlayed(recentData);
-        setArtists(uniqueArtists);
-      } catch {
-        // Silent fail (preserves behavior)
+        setQuickPicks(quickData.slice(0, 6)); // Keep grid tight (max 6 items)
+        setFocusFlow(focusData);
+        setLocalTrending(localData);
+        setArtists(uniqueArtists.slice(0, 10));
+      } catch (error) {
+        console.error("Failed to load dashboard:", error);
+      } finally {
+        setLoadingHome(false);
       }
-
-      setLoadingHome(false);
     };
 
     fetchHomeDashboard();
   }, []);
 
-  /**
-   * Executes a fresh search (page = 1).
-   */
-  const handleSearch = useCallback(async (): Promise<void> => {
-    if (!query.trim()) return;
-
-    setIsSearching(true);
-    setPage(1);
-
-    const results = await searchSongs(query, 1);
-    setSearchResults(results);
-
-    setIsSearching(false);
-  }, [query]);
-
-  /**
-   * Infinite scroll loader.
-   * Loads next page and appends results.
-   */
-  const loadMoreSongs = useCallback(async (): Promise<void> => {
-    if (
-      loadingMore ||
-      isSearching ||
-      searchResults.length === 0 ||
-      !query.trim()
-    ) {
-      return;
-    }
-
-    setLoadingMore(true);
-
-    const nextPage = page + 1;
-    const newResults = await searchSongs(query, nextPage);
-
-    if (newResults.length > 0) {
-      setSearchResults((prev) => [...prev, ...newResults]);
-      setPage(nextPage);
-    }
-
-    setLoadingMore(false);
-  }, [loadingMore, isSearching, searchResults, query, page]);
-
-  /**
-   * Resets player and plays selected track.
-   * Preserves queue + background playback logic.
-   */
   const handlePlaySong = useCallback(
     async (song: Song): Promise<void> => {
+      if (!song.url) {
+        alert(`Sorry! The API didn't provide an audio link for "${song.title}".`);
+        return;
+      }
+
+      const track = {
+        id: song.id,
+        url: song.url,
+        title: song.title,
+        artist: song.artist,
+        artwork: song.artwork || defaultArtwork,
+      };
+
+      setCurrentTrack(track);
+      addToHistory(track);
+      navigation.navigate('Player');
+
       try {
-        if (!song.url) {
-          alert(
-            `Sorry! The API didn't provide an audio link for "${song.title}".`
-          );
-          return;
-        }
-
-        const track = {
-          id: song.id,
-          url: song.url,
-          title: song.title,
-          artist: song.artist,
-          artwork: song.artwork || defaultArtwork,
-        };
-
         await TrackPlayer.reset();
         await TrackPlayer.add([track]);
         await TrackPlayer.play();
-
-        setCurrentTrack(track);
         setPlaying(true);
-
-        navigation.navigate('Player');
-      } catch {
-        // Silent fail to preserve behavior
-      }
+      } catch {}
     },
-    [navigation, setCurrentTrack, setPlaying]
+    [navigation, setCurrentTrack, setPlaying, addToHistory]
   );
 
+  // --- COMPONENT RENDERERS ---
+
+  // 1. New Quick Pick Card (The 2-column top grid)
+  const renderQuickPick = (item: Song, index: number) => (
+    <TouchableOpacity
+      key={`quick-${item.id}-${index}`}
+      style={styles.quickPickCard}
+      onPress={() => handlePlaySong(item)}
+      activeOpacity={0.7}
+    >
+      <Image source={{ uri: item.artwork }} style={styles.quickPickImage} />
+      <Text style={styles.quickPickTitle} numberOfLines={2}>
+        {item.title}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  // 2. Standard Square Card
   const renderSquareCard: ListRenderItem<Song> = ({ item }) => (
     <TouchableOpacity
       style={styles.squareCard}
       onPress={() => handlePlaySong(item)}
-      activeOpacity={0.8}
+      activeOpacity={0.7}
     >
       <Image source={{ uri: item.artwork }} style={styles.squareImage} />
       <Text style={styles.squareTitle} numberOfLines={1}>
@@ -174,11 +140,12 @@ export default function HomeScreen(): JSX.Element {
     </TouchableOpacity>
   );
 
+  // 3. Circle Artist Card
   const renderCircleCard: ListRenderItem<Song> = ({ item }) => (
     <TouchableOpacity
       style={styles.circleCard}
       onPress={() => handlePlaySong(item)}
-      activeOpacity={0.8}
+      activeOpacity={0.7}
     >
       <Image source={{ uri: item.artwork }} style={styles.circleImage} />
       <Text style={styles.circleTitle} numberOfLines={1}>
@@ -187,245 +154,225 @@ export default function HomeScreen(): JSX.Element {
     </TouchableOpacity>
   );
 
-  const renderSearchResult: ListRenderItem<Song> = ({ item }) => (
-    <TouchableOpacity
-      style={styles.listItem}
-      onPress={() => handlePlaySong(item)}
-      activeOpacity={0.8}
-    >
-      <Image source={{ uri: item.artwork }} style={styles.artwork} />
-
-      <View style={styles.songInfo}>
-        <Text style={styles.songTitle} numberOfLines={1}>
-          {item.title}
-        </Text>
-        <Text style={styles.songArtist} numberOfLines={1}>
-          {item.artist}
-        </Text>
-      </View>
-
-      <TouchableOpacity
-        style={styles.moreButton}
-        hitSlop={hitSlop}
-        onPress={() => {
-          addToQueue(item);
-          alert(`Added "${item.title}" to Queue!`);
-        }}
-      >
-        <PlusCircle color="#A0A0A0" size={24} />
-      </TouchableOpacity>
-    </TouchableOpacity>
-  );
-
   return (
     <SafeAreaView style={styles.container}>
+      {/* --- PREMIUM HEADER --- */}
       <View style={styles.topBar}>
-        <Text style={styles.greetingText}>👋 Welcome back!</Text>
-        <Text style={styles.subGreeting}>
-          What do you want to listen to?
-        </Text>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.greetingText}>{getGreeting()}</Text>
+        </View>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
+            <Bell color="#FFFFFF" size={24} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
+            <Settings color="#FFFFFF" size={24} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Search color="#A0A0A0" size={20} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search for songs..."
-          placeholderTextColor="#A0A0A0"
-          value={query}
-          onChangeText={(text) => {
-            setQuery(text);
-            if (!text) setSearchResults([]);
-          }}
-          onSubmitEditing={handleSearch}
-          returnKeyType="search"
-        />
-      </View>
-
-      {query.trim().length === 0 ? (
-        loadingHome ? (
-          <ActivityIndicator
-            size="large"
-            color="#FF8216"
-            style={styles.loaderLarge}
-          />
-        ) : (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.dashboardContainer}
-          >
-            <Text style={styles.sectionTitle}>
-              Recommended For You
-            </Text>
-            <FlatList
-              horizontal
-              data={recommended}
-              keyExtractor={(item, index) =>
-                `rec-${item.id}-${index}`
-              }
-              renderItem={renderSquareCard}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-            />
-
-            <Text style={styles.sectionTitle}>
-              Recently Played
-            </Text>
-            <FlatList
-              horizontal
-              data={recentlyPlayed}
-              keyExtractor={(item, index) =>
-                `recent-${item.id}-${index}`
-              }
-              renderItem={renderSquareCard}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-            />
-
-            <Text style={styles.sectionTitle}>
-              Trending Artists
-            </Text>
-            <FlatList
-              horizontal
-              data={artists}
-              keyExtractor={(item, index) =>
-                `artist-${item.id}-${index}`
-              }
-              renderItem={renderCircleCard}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-            />
-          </ScrollView>
-        )
-      ) : isSearching && page === 1 ? (
-        <ActivityIndicator
-          size="large"
-          color="#FF8216"
-          style={styles.loaderLarge}
-        />
+      {/* --- CONTENT --- */}
+      {loadingHome ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#8B5CF6" />
+          <Text style={styles.loadingText}>Curating your vibe...</Text>
+        </View>
       ) : (
-        <FlatList
-          data={searchResults}
-          keyExtractor={(item, index) =>
-            `search-${item.id}-${index}`
-          }
-          renderItem={renderSearchResult}
-          contentContainerStyle={styles.listContainer}
+        <ScrollView
           showsVerticalScrollIndicator={false}
-          onEndReached={loadMoreSongs}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={
-            loadingMore ? (
-              <ActivityIndicator
-                size="small"
-                color="#FF8216"
-                style={styles.loaderSmall}
-              />
-            ) : null
-          }
-        />
+          contentContainerStyle={styles.dashboardContainer}
+        >
+          {/* Quick Picks Grid Section */}
+          <View style={styles.quickPicksContainer}>
+            {quickPicks.map((item, index) => renderQuickPick(item, index))}
+          </View>
+
+          {/* Section: Deep Focus */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Deep Focus</Text>
+          </View>
+          <FlatList
+            horizontal
+            data={focusFlow}
+            keyExtractor={(item, index) => `focus-${item.id}-${index}`}
+            renderItem={renderSquareCard}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          />
+
+          {/* Section: Local Trending */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Trending in Karnataka</Text>
+          </View>
+          <FlatList
+            horizontal
+            data={localTrending}
+            keyExtractor={(item, index) => `local-${item.id}-${index}`}
+            renderItem={renderSquareCard}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          />
+
+          {/* Section: Your Artists */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Artists For You</Text>
+          </View>
+          <FlatList
+            horizontal
+            data={artists}
+            keyExtractor={(item, index) => `artist-${item.id}-${index}`}
+            renderItem={renderCircleCard}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          />
+        </ScrollView>
       )}
 
+      {/* Floating MiniPlayer */}
       <MiniPlayer />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#181A20' },
+  container: {
+    flex: 1,
+    backgroundColor: '#121212', // Slightly elevated from pure #000000 for depth
+  },
+
+  // -- HEADER STYLES --
   topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   greetingText: {
-    color: 'white',
-    fontSize: 28,
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
-  subGreeting: {
-    color: '#A0A0A0',
-    fontSize: 16,
-    marginTop: 4,
-  },
-  searchContainer: {
+  headerIcons: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#282A30',
-    borderRadius: 12,
-    marginHorizontal: 16,
-    paddingHorizontal: 12,
-    marginBottom: 16,
-    height: 50,
+    gap: 16,
   },
-  searchInput: {
+  iconBtn: {
+    padding: 4,
+  },
+
+  // -- LOADING STYLES --
+  loadingContainer: {
     flex: 1,
-    color: 'white',
-    marginLeft: 10,
-    fontSize: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  sectionTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
+  loadingText: {
+    color: '#A1A1AA',
+    marginTop: 16,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  // -- DASHBOARD LAYOUT --
+  dashboardContainer: {
+    paddingBottom: 140, // Increased padding to clear the new MiniPlayer shadow comfortably
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginHorizontal: 16,
-    marginTop: 10,
+    marginTop: 24,
     marginBottom: 12,
   },
-  squareCard: { width: 130, marginRight: 16, marginBottom: 16 },
-  squareImage: {
-    width: 130,
-    height: 130,
-    borderRadius: 12,
-    marginBottom: 8,
+  sectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.4,
   },
-  squareTitle: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 2,
+  horizontalList: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
   },
-  squareSubtitle: { color: '#A0A0A0', fontSize: 12 },
-  circleCard: {
-    width: 110,
-    alignItems: 'center',
-    marginRight: 16,
-    marginBottom: 16,
+
+  // -- QUICK PICK GRID (TOP 6) --
+  quickPicksContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginTop: 8,
+    gap: 8, // Native gap handling for modern React Native
   },
-  circleImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 8,
-  },
-  circleTitle: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  listContainer: { paddingHorizontal: 16, paddingBottom: 100 },
-  listItem: {
+  quickPickCard: {
+    width: (width - 40) / 2, // Exactly half screen width minus padding and gap
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    backgroundColor: '#27272A', // Zinc-800
+    borderRadius: 6,
+    overflow: 'hidden',
   },
-  artwork: { width: 64, height: 64, borderRadius: 12 },
-  songInfo: {
+  quickPickImage: {
+    width: 56,
+    height: 56,
+  },
+  quickPickTitle: {
     flex: 1,
-    marginLeft: 16,
-    justifyContent: 'center',
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    paddingHorizontal: 10,
   },
-  songTitle: {
-    color: 'white',
-    fontSize: 16,
+
+  // -- SQUARE CARD STYLES --
+  squareCard: {
+    width: 140, // Slightly larger cards look more premium
+    marginRight: 16,
+  },
+  squareImage: {
+    width: 140,
+    height: 140,
+    borderRadius: 8, // Tighter border radius for album art
+    marginBottom: 10,
+    backgroundColor: '#27272A',
+  },
+  squareTitle: {
+    color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '600',
     marginBottom: 4,
   },
-  songArtist: { color: '#A0A0A0', fontSize: 14 },
-  moreButton: { padding: 8 },
-  dashboardContainer: { paddingBottom: 120 },
-  horizontalList: { paddingHorizontal: 16 },
-  loaderLarge: { marginTop: 40 },
-  loaderSmall: { marginVertical: 20 },
+  squareSubtitle: {
+    color: '#A1A1AA',
+    fontSize: 12,
+    fontWeight: '400',
+  },
+
+  // -- CIRCLE ARTIST CARD STYLES --
+  circleCard: {
+    width: 104,
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  circleImage: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    marginBottom: 10,
+    backgroundColor: '#27272A',
+  },
+  circleTitle: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 });

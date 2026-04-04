@@ -1,4 +1,11 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import {
+  View,
+  StyleSheet,
+  Animated,
+  TouchableWithoutFeedback,
+  Platform,
+} from 'react-native';
 import {
   createStackNavigator,
   StackNavigationOptions,
@@ -7,54 +14,121 @@ import {
   createBottomTabNavigator,
   BottomTabNavigationOptions,
 } from '@react-navigation/bottom-tabs';
-import { Home, Heart, Library, Settings } from 'lucide-react-native';
+import { Home, Search, Library, Settings } from 'lucide-react-native';
 
-// Screens
 import HomeScreen from '../screens/HomeScreen';
 import PlayerScreen from '../screens/PlayerScreen';
 import QueueScreen from '../screens/QueueScreen';
-import FavoritesScreen from '../screens/FavoritesScreen';
+import SearchScreen from '../screens/SearchScreen';
 import PlaylistsScreen from '../screens/PlaylistsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 
-/**
- * Root stack navigation param definitions.
- */
 export type RootStackParamList = {
   Main: undefined;
   Player: undefined;
   Queue: undefined;
 };
 
-/**
- * Bottom tab navigation param definitions.
- */
 export type MainTabParamList = {
   HomeTab: undefined;
-  Favorites: undefined;
-  Playlists: undefined;
+  SearchTab: undefined;
+  LibraryTab: undefined;
   Settings: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-/**
- * Bottom tab navigator containing main app sections.
- * UI and behavior remain unchanged.
- */
-function MainTabs(): JSX.Element {
+// --- CUSTOM ANIMATED TAB BUTTON ---
+const AnimatedTabButton = (props: any) => {
+  const { children, accessibilityState, onPress } = props;
+  const focused = accessibilityState.selected;
+
+  // Animation Values
+  const scale = useRef(new Animated.Value(focused ? 0.85 : 1)).current;
+  const translateY = useRef(new Animated.Value(focused ? -4 : 0)).current;
+  const rotate = useRef(new Animated.Value(0)).current;
+
+  // Handle Focus Animation (Shrink & Float Up)
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scale, {
+        toValue: focused ? 0.85 : 1,
+        useNativeDriver: true,
+        friction: 5, // Lower friction = more bounce
+        tension: 100,
+      }),
+      Animated.spring(translateY, {
+        toValue: focused ? -6 : 0, // Float up by 6 pixels
+        useNativeDriver: true,
+        friction: 5,
+        tension: 100,
+      }),
+    ]).start();
+  }, [focused, scale, translateY]);
+
+  // Handle Press Animation (The Shake)
+  const handlePress = (e: any) => {
+    // Quick sequence to wobble left and right
+    Animated.sequence([
+      Animated.timing(rotate, { toValue: 1, duration: 40, useNativeDriver: true }),
+      Animated.timing(rotate, { toValue: -1, duration: 40, useNativeDriver: true }),
+      Animated.timing(rotate, { toValue: 1, duration: 40, useNativeDriver: true }),
+      Animated.timing(rotate, { toValue: 0, duration: 40, useNativeDriver: true }),
+    ]).start();
+
+    // Trigger the actual navigation
+    if (onPress) onPress(e);
+  };
+
+  // Interpolate rotation value into degrees
+  const rotation = rotate.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: ['-10deg', '0deg', '10deg'],
+  });
+
+  return (
+    <TouchableWithoutFeedback onPress={handlePress}>
+      <View style={styles.tabButtonContainer}>
+        <Animated.View
+          style={{
+            transform: [
+              { scale },
+              { translateY },
+              { rotate: rotation }
+            ],
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {children}
+        </Animated.View>
+      </View>
+    </TouchableWithoutFeedback>
+  );
+};
+// ----------------------------------
+
+function MainTabs(): React.JSX.Element {
   const screenOptions: BottomTabNavigationOptions = {
     headerShown: false,
     tabBarStyle: {
-      backgroundColor: '#181A20',
-      borderTopColor: '#282A30',
-      height: 65,
-      paddingBottom: 10,
+      backgroundColor: '#000000',
+      borderTopWidth: 0, // Removed border for a sleeker look
+      elevation: 0, // Remove shadow on Android
+      height: Platform.OS === 'ios' ? 88 : 68, // Extra height for the "float up" animation
+      paddingBottom: Platform.OS === 'ios' ? 24 : 10,
       paddingTop: 10,
     },
-    tabBarActiveTintColor: '#FF8216',
-    tabBarInactiveTintColor: '#A0A0A0',
+    tabBarActiveTintColor: '#FFFFFF', // White when active stands out better
+    tabBarInactiveTintColor: '#52525B', // Zinc-600
+    tabBarLabelStyle: {
+      fontSize: 10,
+      fontWeight: '700',
+      marginTop: 4,
+    },
+    // Apply our custom animated button to all tabs
+    tabBarButton: (props) => <AnimatedTabButton {...props} />,
   };
 
   return (
@@ -65,29 +139,29 @@ function MainTabs(): JSX.Element {
         options={{
           tabBarLabel: 'Home',
           tabBarIcon: ({ color, size }) => (
-            <Home color={color} size={size} />
+            <Home color={color} size={size} strokeWidth={2.5} />
           ),
         }}
       />
 
       <Tab.Screen
-        name="Favorites"
-        component={FavoritesScreen}
+        name="SearchTab"
+        component={SearchScreen}
         options={{
-          tabBarLabel: 'Favorites',
+          tabBarLabel: 'Search',
           tabBarIcon: ({ color, size }) => (
-            <Heart color={color} size={size} />
+            <Search color={color} size={size} strokeWidth={2.5} />
           ),
         }}
       />
 
       <Tab.Screen
-        name="Playlists"
+        name="LibraryTab"
         component={PlaylistsScreen}
         options={{
-          tabBarLabel: 'Playlists',
+          tabBarLabel: 'Library',
           tabBarIcon: ({ color, size }) => (
-            <Library color={color} size={size} />
+            <Library color={color} size={size} strokeWidth={2.5} />
           ),
         }}
       />
@@ -98,7 +172,7 @@ function MainTabs(): JSX.Element {
         options={{
           tabBarLabel: 'Settings',
           tabBarIcon: ({ color, size }) => (
-            <Settings color={color} size={size} />
+            <Settings color={color} size={size} strokeWidth={2.5} />
           ),
         }}
       />
@@ -106,34 +180,51 @@ function MainTabs(): JSX.Element {
   );
 }
 
-/**
- * Root navigator for the app.
- * Contains:
- * 1. Main Tabs (Primary UI)
- * 2. Modal screens (Player & Queue)
- */
-export default function AppNavigator(): JSX.Element {
+export default function AppNavigator(): React.JSX.Element {
   const stackOptions: StackNavigationOptions = {
     headerShown: false,
+    // Add smooth cross-fade transitions for stack screens
+    animationEnabled: true,
+    cardStyleInterpolator: ({ current: { progress } }) => ({
+      cardStyle: {
+        opacity: progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 1],
+        }),
+      },
+    }),
   };
 
   return (
     <Stack.Navigator screenOptions={stackOptions}>
-      {/* Main Application Tabs */}
       <Stack.Screen name="Main" component={MainTabs} />
 
-      {/* Modal Screens */}
       <Stack.Screen
         name="Player"
         component={PlayerScreen}
-        options={{ presentation: 'modal' }}
+        options={{ 
+          presentation: 'modal',
+          // Modals natively slide up from the bottom on iOS/Android
+          gestureEnabled: true,
+        }}
       />
 
       <Stack.Screen
         name="Queue"
         component={QueueScreen}
-        options={{ presentation: 'modal' }}
+        options={{ 
+          presentation: 'modal',
+          gestureEnabled: true,
+        }}
       />
     </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  tabButtonContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

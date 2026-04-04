@@ -11,7 +11,7 @@ import {
   ListRenderItem,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, Plus, X, Clock } from 'lucide-react-native';
+import { Search, Plus, X } from 'lucide-react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import TrackPlayer from 'react-native-track-player';
 
@@ -45,8 +45,8 @@ export default function SearchScreen(): React.JSX.Element {
       try {
         const results = await searchSongs(query, 1);
         setSearchResults(results);
-      } catch (e) {
-        console.error(e);
+      } catch {
+        // silent fail
       } finally {
         setIsSearching(false);
       }
@@ -76,10 +76,7 @@ export default function SearchScreen(): React.JSX.Element {
         <Text style={styles.songTitleText} numberOfLines={1}>{item.title}</Text>
         <Text style={styles.songArtistText} numberOfLines={1}>{item.artist}</Text>
       </View>
-      <TouchableOpacity 
-        onPress={() => addToQueue(item)} 
-        style={styles.actionBtn}
-      >
+      <TouchableOpacity onPress={() => addToQueue(item)} style={styles.actionBtn}>
         <Plus color="#A1A1AA" size={20} />
       </TouchableOpacity>
     </TouchableOpacity>
@@ -87,7 +84,6 @@ export default function SearchScreen(): React.JSX.Element {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 1. CLEAN HEADER */}
       <View style={styles.header}>
         <Text style={styles.title}>Search</Text>
         <View style={styles.searchBar}>
@@ -108,7 +104,6 @@ export default function SearchScreen(): React.JSX.Element {
         </View>
       </View>
 
-      {/* 2. RESULTS / HISTORY LIST */}
       <View style={styles.listWrapper}>
         {isSearching ? (
           <ActivityIndicator color="#8B5CF6" style={styles.loader} />

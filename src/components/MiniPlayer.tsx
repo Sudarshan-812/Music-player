@@ -6,7 +6,6 @@ import {
   Image,
   Pressable,
   TouchableOpacity,
-  Platform,
 } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Play, Pause, SkipForward } from 'lucide-react-native';
@@ -21,7 +20,6 @@ type RootStackParamList = {
   Player: undefined;
 };
 
-// Slightly larger hitSlop for better mobile accessibility
 const hitSlop = { top: 16, bottom: 16, left: 16, right: 16 };
 
 export default function MiniPlayer(): React.JSX.Element | null {
@@ -29,10 +27,8 @@ export default function MiniPlayer(): React.JSX.Element | null {
   const { currentTrack, playNext } = usePlayerStore();
   const playbackState = usePlaybackState();
   const { position, duration } = useProgress();
-  
+
   const isPlaying = playbackState.state === State.Playing;
-  
-  // Calculate progress percentage for the dynamic bar
   const progressPercent = duration > 0 ? (position / duration) * 100 : 0;
 
   const togglePlayback = useCallback(async (): Promise<void> => {
@@ -53,19 +49,17 @@ export default function MiniPlayer(): React.JSX.Element | null {
     <Pressable
       style={({ pressed }) => [
         styles.outerShadowContainer,
-        pressed && styles.containerPressed
+        pressed && styles.containerPressed,
       ]}
       onPress={handleOpenPlayer}
     >
       <View style={styles.contentWrapper}>
-        {/* --- DYNAMIC AMBIENT BACKGROUND --- */}
         <Image
           source={{ uri: currentTrack.artwork }}
           style={StyleSheet.absoluteFillObject}
-          blurRadius={40} // Slightly tighter blur for a smaller component
+          blurRadius={40}
         />
         <View style={styles.darkOverlay} />
-        {/* ---------------------------------- */}
 
         <View style={styles.innerContainer}>
           <View style={styles.artworkContainer}>
@@ -109,7 +103,6 @@ export default function MiniPlayer(): React.JSX.Element | null {
           </View>
         </View>
 
-        {/* Updated Progress Bar to match the new white/ambient theme */}
         <View style={styles.progressTrack}>
           <View style={[styles.progressBar, { width: `${progressPercent}%` }]} />
         </View>
@@ -118,7 +111,6 @@ export default function MiniPlayer(): React.JSX.Element | null {
   );
 }
 
-// Shared text shadow to keep text readable against ambient colors
 const textShadowStyle = {
   textShadowColor: 'rgba(0, 0, 0, 0.5)',
   textShadowOffset: { width: 0, height: 1 },
@@ -126,35 +118,32 @@ const textShadowStyle = {
 };
 
 const styles = StyleSheet.create({
-  // Outer container handles the shadow exclusively
   outerShadowContainer: {
     position: 'absolute',
     bottom: 16,
     left: 12,
     right: 12,
     borderRadius: 16,
-    // Premium shadow setup
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
     elevation: 12,
-    backgroundColor: '#121212', // Fallback behind the image
+    backgroundColor: '#121212',
   },
   containerPressed: {
     opacity: 0.9,
     transform: [{ scale: 0.97 }],
   },
-  // Inner wrapper handles clipping the blurred image to the border radius
   contentWrapper: {
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)', // Subtle glassmorphic border
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   darkOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)', // Darkens the blurred art just enough for text readability
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   innerContainer: {
     flexDirection: 'row',
@@ -198,7 +187,7 @@ const styles = StyleSheet.create({
   controlsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12, // Slightly more space between the bare icons
+    gap: 12,
     paddingRight: 4,
   },
   controlBtn: {
@@ -206,18 +195,17 @@ const styles = StyleSheet.create({
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
-    // Removed solid background color!
   },
   playIconOffset: {
     marginLeft: 3,
   },
   progressTrack: {
-    height: 2, 
-    backgroundColor: 'rgba(255, 255, 255, 0.2)', // Semi-transparent white
+    height: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     width: '100%',
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#FFFFFF', // Solid white to pop against the ambient background
+    backgroundColor: '#FFFFFF',
   },
 });

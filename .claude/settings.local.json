@@ -28,7 +28,8 @@
       "Bash(curl -s --max-time 10 \"https://saavn-api.vercel.app/search?query=arijit+singh\")",
       "Bash(curl -s --max-time 10 \"https://jiosaavn.vercel.app/api/search/songs?query=arijit\")",
       "Bash(curl -s --max-time 15 \"https://jiosaavn-api-orpin.vercel.app/search/songs?query=arijit+singh&limit=2\")",
-      "Bash(echo \"---status: $?\")"
+      "Bash(echo \"---status: $?\")",
+      "Bash(./gradlew assembleRelease)"
     ]
   }
 }

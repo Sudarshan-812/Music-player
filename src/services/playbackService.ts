@@ -1,4 +1,4 @@
-import TrackPlayer, { Event, State } from 'react-native-track-player';
+import TrackPlayer, { Event } from 'react-native-track-player';
 import { usePlayerStore } from '../store/usePlayerStore';
 import { searchSongs } from '../api/musicApi';
 
@@ -24,7 +24,6 @@ export const PlaybackService = async function () {
     usePlayerStore.getState().playPrevious();
   });
 
-  // Auto-play: when the queue runs out, fetch more songs automatically
   TrackPlayer.addEventListener(Event.PlaybackQueueEnded, async () => {
     try {
       const query = AUTO_PLAY_QUERIES[Math.floor(Math.random() * AUTO_PLAY_QUERIES.length)];
@@ -41,12 +40,9 @@ export const PlaybackService = async function () {
         await usePlayerStore.getState().appendToQueue(newTracks);
         await TrackPlayer.play();
       }
-    } catch {
-      // silently fail — don't crash the service
-    }
+    } catch {}
   });
 
-  // Apply volume normalization whenever a new track becomes active
   TrackPlayer.addEventListener(Event.PlaybackActiveTrackChanged, async () => {
     const { normalizeVolume } = usePlayerStore.getState();
     await TrackPlayer.setVolume(normalizeVolume ? 0.8 : 1.0);

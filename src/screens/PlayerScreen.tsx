@@ -319,12 +319,12 @@ const BottomSheet = ({ visible, track, onClose, onAddToPlaylist, onAddToQueue, q
         <SheetRow
           icon={<Mic2 color="#FFFFFF" size={20} />}
           label="View Artist"
-          onPress={() => { console.log('View Artist:', track.artist); onClose(); }}
+          onPress={onClose}
         />
         <SheetRow
           icon={<Timer color="#FFFFFF" size={20} />}
           label="Sleep Timer"
-          onPress={() => { console.log('Sleep Timer opened'); onClose(); }}
+          onPress={onClose}
         />
         <SheetRow
           icon={<SkipForward color="#FFFFFF" size={20} />}

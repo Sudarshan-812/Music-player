@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import TrackPlayer from 'react-native-track-player';
-import { Bell, Settings } from 'lucide-react-native'; // Added header icons
+import { Bell, Settings } from 'lucide-react-native';
 
 import { searchSongs, Song } from '../api/musicApi';
 import { usePlayerStore } from '../store/usePlayerStore';
@@ -24,7 +24,6 @@ import type { RootStackParamList } from '../navigation/AppNavigator';
 const { width } = Dimensions.get('window');
 const defaultArtwork = 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&q=80';
 
-// Helper for dynamic immersion
 const getGreeting = (): string => {
   const hour = new Date().getHours();
   if (hour < 12) return 'Good morning';
@@ -35,7 +34,6 @@ const getGreeting = (): string => {
 export default function HomeScreen(): React.JSX.Element {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
 
-  // Updated state for our "Smart" categories
   const [quickPicks, setQuickPicks] = useState<Song[]>([]);
   const [focusFlow, setFocusFlow] = useState<Song[]>([]);
   const [localTrending, setLocalTrending] = useState<Song[]>([]);
@@ -48,14 +46,12 @@ export default function HomeScreen(): React.JSX.Element {
     const fetchHomeDashboard = async (): Promise<void> => {
       setLoadingHome(true);
       try {
-        // Fetching specific, context-aware "Smart" categories
         const [quickData, focusData, localData] = await Promise.all([
-          searchSongs('bansuri flute instrumental relaxing', 1), // Calm vibes for Quick Picks
-          searchSongs('deep focus lofi coding', 1),            // Heavy focus / gaming
-          searchSongs('kannada chartbusters', 1),              // Localized trending
+          searchSongs('bansuri flute instrumental relaxing', 1),
+          searchSongs('deep focus lofi coding', 1),
+          searchSongs('kannada chartbusters', 1),
         ]);
 
-        // Extract unique artists safely
         const combinedForArtists = [...quickData, ...focusData, ...localData];
         const uniqueArtists = Array.from(
           new Set(combinedForArtists.map((a) => a.artist))
@@ -63,12 +59,12 @@ export default function HomeScreen(): React.JSX.Element {
           .map((name) => combinedForArtists.find((a) => a.artist === name))
           .filter(Boolean) as Song[];
 
-        setQuickPicks(quickData.slice(0, 6)); // Keep grid tight (max 6 items)
+        setQuickPicks(quickData.slice(0, 6));
         setFocusFlow(focusData);
         setLocalTrending(localData);
         setArtists(uniqueArtists.slice(0, 10));
-      } catch (error) {
-        console.error("Failed to load dashboard:", error);
+      } catch {
+        // silent fail
       } finally {
         setLoadingHome(false);
       }
@@ -79,10 +75,7 @@ export default function HomeScreen(): React.JSX.Element {
 
   const handlePlaySong = useCallback(
     async (song: Song): Promise<void> => {
-      if (!song.url) {
-        alert(`Sorry! The API didn't provide an audio link for "${song.title}".`);
-        return;
-      }
+      if (!song.url) return;
 
       const track = {
         id: song.id,
@@ -106,9 +99,6 @@ export default function HomeScreen(): React.JSX.Element {
     [navigation, setCurrentTrack, setPlaying, addToHistory]
   );
 
-  // --- COMPONENT RENDERERS ---
-
-  // 1. New Quick Pick Card (The 2-column top grid)
   const renderQuickPick = (item: Song, index: number) => (
     <TouchableOpacity
       key={`quick-${item.id}-${index}`}
@@ -123,7 +113,6 @@ export default function HomeScreen(): React.JSX.Element {
     </TouchableOpacity>
   );
 
-  // 2. Standard Square Card
   const renderSquareCard: ListRenderItem<Song> = ({ item }) => (
     <TouchableOpacity
       style={styles.squareCard}
@@ -140,7 +129,6 @@ export default function HomeScreen(): React.JSX.Element {
     </TouchableOpacity>
   );
 
-  // 3. Circle Artist Card
   const renderCircleCard: ListRenderItem<Song> = ({ item }) => (
     <TouchableOpacity
       style={styles.circleCard}
@@ -156,7 +144,6 @@ export default function HomeScreen(): React.JSX.Element {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* --- PREMIUM HEADER --- */}
       <View style={styles.topBar}>
         <View style={styles.headerTextContainer}>
           <Text style={styles.greetingText}>{getGreeting()}</Text>
@@ -171,7 +158,6 @@ export default function HomeScreen(): React.JSX.Element {
         </View>
       </View>
 
-      {/* --- CONTENT --- */}
       {loadingHome ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#8B5CF6" />
@@ -182,12 +168,10 @@ export default function HomeScreen(): React.JSX.Element {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.dashboardContainer}
         >
-          {/* Quick Picks Grid Section */}
           <View style={styles.quickPicksContainer}>
             {quickPicks.map((item, index) => renderQuickPick(item, index))}
           </View>
 
-          {/* Section: Deep Focus */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Deep Focus</Text>
           </View>
@@ -200,7 +184,6 @@ export default function HomeScreen(): React.JSX.Element {
             contentContainerStyle={styles.horizontalList}
           />
 
-          {/* Section: Local Trending */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Trending in Karnataka</Text>
           </View>
@@ -213,7 +196,6 @@ export default function HomeScreen(): React.JSX.Element {
             contentContainerStyle={styles.horizontalList}
           />
 
-          {/* Section: Your Artists */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Artists For You</Text>
           </View>
@@ -228,7 +210,6 @@ export default function HomeScreen(): React.JSX.Element {
         </ScrollView>
       )}
 
-      {/* Floating MiniPlayer */}
       <MiniPlayer />
     </SafeAreaView>
   );
@@ -237,10 +218,8 @@ export default function HomeScreen(): React.JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212', // Slightly elevated from pure #000000 for depth
+    backgroundColor: '#121212',
   },
-
-  // -- HEADER STYLES --
   topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -266,8 +245,6 @@ const styles = StyleSheet.create({
   iconBtn: {
     padding: 4,
   },
-
-  // -- LOADING STYLES --
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -279,10 +256,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-
-  // -- DASHBOARD LAYOUT --
   dashboardContainer: {
-    paddingBottom: 140, // Increased padding to clear the new MiniPlayer shadow comfortably
+    paddingBottom: 140,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -302,21 +277,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
   },
-
-  // -- QUICK PICK GRID (TOP 6) --
   quickPicksContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     marginTop: 8,
-    gap: 8, // Native gap handling for modern React Native
+    gap: 8,
   },
   quickPickCard: {
-    width: (width - 40) / 2, // Exactly half screen width minus padding and gap
+    width: (width - 40) / 2,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#27272A', // Zinc-800
+    backgroundColor: '#27272A',
     borderRadius: 6,
     overflow: 'hidden',
   },
@@ -331,16 +304,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     paddingHorizontal: 10,
   },
-
-  // -- SQUARE CARD STYLES --
   squareCard: {
-    width: 140, // Slightly larger cards look more premium
+    width: 140,
     marginRight: 16,
   },
   squareImage: {
     width: 140,
     height: 140,
-    borderRadius: 8, // Tighter border radius for album art
+    borderRadius: 8,
     marginBottom: 10,
     backgroundColor: '#27272A',
   },
@@ -355,8 +326,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '400',
   },
-
-  // -- CIRCLE ARTIST CARD STYLES --
   circleCard: {
     width: 104,
     alignItems: 'center',
